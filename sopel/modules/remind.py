@@ -203,21 +203,35 @@ def at(bot, trigger):
             month = int(two)
             day = int(three)
 
-    timezone = get_timezone(bot.db, bot.config, tz,
+    if pytz:
+        timezone = get_timezone(bot.db, bot.config, tz, 
                                 trigger.nick, trigger.sender)
-    pytz_timezone = pytz.timezone(timezone)
-    if not timezone:
-        timezone = 'UTC'
-    now = pytz_timezone.localize(datetime.now())
-    at_time = datetime(year, month, day,
-                       int(hour), int(minute), int(second))
-    at_time = pytz_timezone.localize(at_time)
-    timediff = pytz_timezone.normalize(at_time) - now
+        if not timezone:
+            timezone = 'UTC'
+
+        pytz_timezone = pytz.timezone(timezone)
+        now = pytz_timezone.localize(datetime.now())
+        at_time = datetime(year, month, day,
+                           int(hour), int(minute), int(second))
+        at_time = pytz_timezone.localize(at_time)
+        timediff = pytz_timezone.normalize(at_time) - now
+    else:
+        if tz and tz.upper() != 'UTC':
+            bot.reply("I don't have timzeone support installed.")
+            return NOLIMIT
+        now = datetime.now()
+        at_time = datetime(year, month, day,
+                           int(hour), int(minute), int(second))
+        timediff = at_time - now
 
     duration = timediff.seconds + 86400*timediff.days
+
     if duration < 0:
         duration += 86400
-    create_reminder(bot, trigger, duration, message, timezone)
+    if timezone:
+        create_reminder(bot, trigger, duration, message, timezone)
+    else:
+        create_reminder(bot, trigger, duration, message, 'UTC')
 
 
 def create_reminder(bot, trigger, duration, message, tz):
